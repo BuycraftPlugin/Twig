@@ -341,6 +341,7 @@ class_alias('Twig\Extension\CoreExtension', 'Twig_Extension_Core');
 }
 
 namespace {
+    use Illuminate\Database\Eloquent\Model;
     use Twig\Environment;
     use Twig\Error\LoaderError;
     use Twig\Error\RuntimeError;
@@ -1344,6 +1345,19 @@ function twig_array_batch($items, $size, $fill = null, $preserveKeys = true)
  */
 function twig_get_attribute(Environment $env, Source $source, $object, $item, array $arguments = [], $type = /* Template::ANY_CALL */ 'any', $isDefinedTest = false, $ignoreStrictCheck = false, $sandboxed = false, int $lineno = -1)
 {
+    if ($object instanceof Model && $type === 'any') {
+        if ($sandboxed) {
+            $env->getExtension(SandboxExtension::class)->checkPropertyAllowed($object, $item, $lineno, $source);
+        }
+        try {
+            $result = $object->$item;
+            if ($result === null) {
+                return null;
+            }
+        } catch (Throwable $any) {
+            //Let twig try to figure it out....
+        }
+    }
     // array
     if (/* Template::METHOD_CALL */ 'method' !== $type) {
         $arrayItem = \is_bool($item) || \is_float($item) ? (int) $item : $item;
